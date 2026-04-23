@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="貼圖編輯器">
+    
+    <title>LINE 動態貼圖編輯器 · 快速製作工具</title>
+    
+    <link rel="manifest" href="data:application/manifest+json,%7B%22name%22:%22LINE%20動態貼圖編輯器%22,%22short_name%22:%22貼圖製作%22,%22description%22:%22輕鬆製作LINE動態表情貼%22,%22start_url%22:%22/%22,%22display%22:%22standalone%22,%22background_color%22:%22%23ffffff%22,%22theme_color%22:%22%232c3e50%22,%22orientation%22:%22portrait-primary%22,%22icons%22:%5B%7B%22src%22:%22data:image/svg+xml,%3Csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20viewBox=%270%200%20192%20192%27%3E%3Crect%20fill=%27%232c3e50%27%20width=%27192%27%20height=%27192%27/%3E%3Ctext%20x=%2796%27%20y=%27110%27%20font-size=%27100%27%20fill=%27%23fff%27%20text-anchor=%27middle%27%20font-weight=%27bold%27%3E🎨%3C/text%3E%3C/svg%3E%22,%22sizes%22:%22192x192%22,%22type%22:%22image/svg+xml%22%7D%5D%7D">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        :root {
+            --primary: #2c3e50;
+            --accent: #e74c3c;
+            --success: #27ae60;
+            --light: #ecf0f1;
+            --dark: #2c3e50;
+            --border: #bdc3c7;
+            --radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: white;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, #34495e 100%);
+            color: white;
+            padding: 12px 16px;
+            text-align: center;
+            border-bottom: 3px solid var(--accent);
+            box-shadow: var(--shadow);
+        }
+
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 24px;
+            margin-bottom: 4px;
+            letter-spacing: 1px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 12px;
+            padding: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .main {
+                flex-direction: column;
+                gap: 8px;
+                padding: 8px;
+            }
+        }
+
+        .canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .toolbar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+            padding: 12px;
+            background: var(--light);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+        }
+
+        .tool-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .tool-group label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--dark);
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input[type="color"], input[type="range"], select {
+            padding: 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            background: white;
+        }
+
+        input[type="color"] {
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #f8f9fa;
+            border-radius: var(--radius);
+            border: 2px solid var(--border);
+            overflow: hidden;
+            position: relative;
+        }
+
+        canvas {
+            display: block;
+            background: white;
+            cursor: crosshair;
+            box-shadow: inset 0 0 0 1px var(--border);
+            max-width: 100%;
+            height: auto;
+        }
+
+        .sidebar {
+            width: 280px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                flex-direction: row;
+                overflow-x: auto;
+                overflow-y: visible;
+            }
+        }
+
+        .panel {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .panel h3 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .frame-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: var(--light);
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .frame-item:hover {
+            background: #dfe6e9;
+            border-color: var(--primary);
+        }
+
+        .frame-item.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .frame-item.active .frame-label {
+            color: white;
+        }
+
+        .frame-preview {
+            width: 50px;
+            height: 50px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            flex-shrink: 0;
+        }
+
+        .frame-label {
+            flex: 1;
+            font-size: 12px;
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .btn-remove {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            border: none;
+            background: var(--accent);
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-remove:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        button {
+            padding: 10px 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: inherit;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1a252f;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #dfe6e9;
+            border-color: var(--primary);
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+
+        .preview-canvas {
+            width: 100%;
+            height: auto;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: white;
+            display: block;
+        }
+
+        .status {
+            font-size: 11px;
+            color: #7f8c8d;
+            padding: 8px;
+            background: var(--light);
+            border-radius: 4px;
+            text-align: center;
+            font-style: italic;
+        }
+
+        .keyboard-hint {
+            font-size: 10px;
+            color: #95a5a6;
+            margin-top: 6px;
+            padding: 6px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            line-height: 1.4;
+        }
+
+        /* 動畫 */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .panel {
+            animation: slideIn 0.5s ease-out backwards;
+        }
+
+        .panel:nth-child(1) { animation-delay: 0.1s; }
+        .panel:nth-child(2) { animation-delay: 0.2s; }
+        .panel:nth-child(3) { animation-delay: 0.3s; }
+
+        /* 通知 */
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--success);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 6px;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification.error {
+            background: var(--accent);
+        }
+
+        /* 滾動條美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h1>🎨 動態貼圖編輯器</h1>
+            <p>製作 LINE 表情貼 • 完全免費 • 可離線使用</p>
+        </div>
+
+        <div class="main">
+            <div class="canvas-area">
+                <div class="toolbar">
+                    <div class="tool-group">
+                        <label>筆色</label>
+                        <input type="color" id="colorPicker" value="#000000">
+                    </div>
+                    <div class="tool-group">
+                        <label>筆大</label>
+                        <input type="range" id="brushSize" min="1" max="50" value="5">
+                    </div>
+                    <div class="tool-group">
+                        <label>工具</label>
+                        <select id="toolSelect">
+                            <option value="pen">✏️ 筆</option>
+                            <option value="eraser">🧹 擦子</option>
+                            <option value="fill">🪣 填色</option>
+                        </select>
+                    </div>
+                    <div class="tool-group">
+                        <label>操作</label>
+                        <button class="btn-secondary" id="undoBtn" style="width: 100%;">↶ 復原</button>
+                    </div>
+                </div>
+
+                <div class="canvas-container">
+                    <canvas id="canvas" width="370" height="320"></canvas>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <h3>📋 幀時間軸</h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #7f8c8d;">
+                            幀數: <strong id="frameCount">1</strong>
+                        </span>
+                    </div>
+                    <div class="timeline" id="timeline"></div>
+                    <button class="btn-primary" id="addFrameBtn" style="margin-top: 8px; width: 100%;">+ 新增幀</button>
+                </div>
+
+                <div class="panel">
+                    <h3>🎬 動畫預覽</h3>
+                    <canvas id="previewCanvas" class="preview-canvas" width="150" height="130"></canvas>
+                    <div class="controls" style="margin-top: 8px;">
+                        <button class="btn-primary" id="playBtn">▶ 播放</button>
+                        <button class="btn-secondary" id="stopBtn">⏹ 停止</button>
+                    </div>
+                    <div class="status" id="status">點擊「+ 新增幀」開始製作</div>
+                </div>
+
+                <div class="panel">
+                    <h3>💾 導出</h3>
+                    <div class="controls">
+                        <button class="btn-accent" id="exportBtn">⬇ 導出 PNG 序列</button>
+                        <button class="btn-primary" id="exportApngBtn">📤 導出 APNG</button>
+                    </div>
+                    <div class="keyboard-hint">
+                        ⌨️ 快鍵：<br>
+                        Space = 播放/停止<br>
+                        Z = 復原<br>
+                        D = 清除
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Service Worker 註冊
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('data:application/javascript,' + encodeURIComponent(`
+                const CACHE_NAME = 'sticker-maker-v1';
+                const urlsToCache = ['/'];
+                
+                self.addEventListener('install', event => {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then(cache => {
+                            return cache.addAll(urlsToCache).catch(() => {});
+                        })
+                    );
+                    self.skipWaiting();
+                });
+                
+                self.addEventListener('activate', event => {
+                    event.waitUntil(
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    if (cacheName !== CACHE_NAME) {
+                                        return caches.delete(cacheName);
+                                    }
+                                })
+                            );
+                        })
+                    );
+                    self.clients.claim();
+                });
+                
+                self.addEventListener('fetch', event => {
+                    if (event.request.method !== 'GET') return;
+                    
+                    event.respondWith(
+                        caches.match(event.request).then(response => {
+                            return response || fetch(event.request).then(response => {
+                                if (!response || response.status !== 200) return response;
+                                const responseToCache = response.clone();
+                                caches.open(CACHE_NAME).then(cache => {
+                                    cache.put(event.request, responseToCache);
+                                });
+                                return response;
+                            });
+                        }).catch(() => {
+                            return caches.match(event.request);
+                        })
+                    );
+                });
+            `)).catch(e => console.log('SW registration failed:', e));
+        }
+
+        // 核心應用邏輯
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const previewCanvas = document.getElementById('previewCanvas');
+        const previewCtx = previewCanvas.getContext('2d');
+
+        let frames = [getBlankCanvas()];
+        let currentFrameIndex = 0;
+        let isDrawing = false;
+        let isPlaying = false;
+        let animationId = null;
+        let undoStack = [];
+        let lastSaveTime = 0;
+
+        function getBlankCanvas() {
+            const blank = document.createElement('canvas');
+            blank.width = 370;
+            blank.height = 320;
+            const blankCtx = blank.getContext('2d');
+            blankCtx.fillStyle = '#ffffff';
+            blankCtx.fillRect(0, 0, 370, 320);
+            return blank;
+        }
+
+        function renderCurrentFrame() {
+            const currentFrame = frames[currentFrameIndex];
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentFrame, 0, 0);
+            updateTimeline();
+            autoSave();
+        }
+
+        function updateTimeline() {
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+            frames.forEach((frame, index) => {
+                const item = document.createElement('div');
+                item.className = 'frame-item' + (index === currentFrameIndex ? ' active' : '');
+                
+                const preview = document.createElement('canvas');
+                preview.className = 'frame-preview';
+                preview.width = 50;
+                preview.height = 50;
+                const previewCtx = preview.getContext('2d');
+                previewCtx.drawImage(frame, 0, 0, 50, 50);
+
+                const label = document.createElement('span');
+                label.className = 'frame-label';
+                label.textContent = `幀 ${index + 1}`;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.textContent = '✕';
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (frames.length > 1) {
+                        frames.splice(index, 1);
+                        if (currentFrameIndex >= frames.length) {
+                            currentFrameIndex = frames.length - 1;
+                        }
+                        renderCurrentFrame();
+                        document.getElementById('frameCount').textContent = frames.length;
+                    }
+                });
+
+                item.appendChild(preview);
+                item.appendChild(label);
+                item.appendChild(removeBtn);
+
+                item.addEventListener('click', () => {
+                    currentFrameIndex = index;
+                    renderCurrentFrame();
+                });
+
+                timeline.appendChild(item);
+            });
+
+            document.getElementById('frameCount').textContent = frames.length;
+        }
+
+        // 事件監聽
+        document.getElementById('addFrameBtn').addEventListener('click', () => {
+            frames.push(getBlankCanvas());
+            currentFrameIndex = frames.length - 1;
+            renderCurrentFrame();
+            showNotification('✓ 新增幀成功');
+        });
+
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            saveState();
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            startDrawing(x, y);
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            draw(x, y);
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            updatePreview();
+        });
+
+        canvas.addEventListener('mouseleave', () => {
+            isDrawing = false;
+        });
+
+        // 觸控支援
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            isDrawing = true;
+            saveState();
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+            startDrawing(x, y);
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const x = (touch.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (touch.clientY - rect.top) * (canvas.height / rect.height);
+            draw(x, y);
+        });
+
+        canvas.addEventListener('touchend', () => {
+            isDrawing = false;
+            updatePreview();
+        });
+
+        function startDrawing(x, y) {
+            ctx.strokeStyle = document.getElementById('colorPicker').value;
+            ctx.lineWidth = document.getElementById('brushSize').value;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(x, y) {
+            const tool = document.getElementById('toolSelect').value;
+            const currentFrame = frames[currentFrameIndex];
+
+            if (tool === 'pen') {
+                ctx.strokeStyle = document.getElementById('colorPicker').value;
+                ctx.lineWidth = document.getElementById('brushSize').value;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            } else if (tool === 'eraser') {
+                ctx.clearRect(x - 5, y - 5, 10, 10);
+            }
+
+            currentFrame.getContext('2d').drawImage(canvas, 0, 0);
+        }
+
+        function saveState() {
+            const currentFrame = frames[currentFrameIndex];
+            undoStack.push(currentFrame.toDataURL());
+            if (undoStack.length > 20) undoStack.shift();
+        }
+
+        document.getElementById('undoBtn').addEventListener('click', () => {
+            if (undoStack.length > 0) {
+                const imageData = undoStack.pop();
+                const img = new Image();
+                img.onload = () => {
+                    const currentFrame = frames[currentFrameIndex];
+                    const frameCtx = currentFrame.getContext('2d');
+                    frameCtx.clearRect(0, 0, 370, 320);
+                    frameCtx.drawImage(img, 0, 0);
+                    renderCurrentFrame();
+                    showNotification('✓ 已復原');
+                };
+                img.src = imageData;
+            }
+        });
+
+        function updatePreview() {
+            if (frames.length === 0) return;
+            previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+            previewCtx.drawImage(frames[0], 0, 0, previewCanvas.width, previewCanvas.height);
+        }
+
+        document.getElementById('playBtn').addEventListener('click', () => {
+            if (isPlaying) return;
+            isPlaying = true;
+            let frameIndex = 0;
+            const speed = 150;
+
+            function playFrame() {
+                previewCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+                previewCtx.drawImage(frames[frameIndex], 0, 0, previewCanvas.width, previewCanvas.height);
+                frameIndex = (frameIndex + 1) % frames.length;
+                animationId = setTimeout(playFrame, speed);
+            }
+
+            playFrame();
+            document.getElementById('status').textContent = '▶ 動畫播放中...';
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', () => {
+            isPlaying = false;
+            clearTimeout(animationId);
+            updatePreview();
+            document.getElementById('status').textContent = '⏸ 已停止';
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            frames.forEach((frame, index) => {
+                const link = document.createElement('a');
+                link.href = frame.toDataURL('image/png');
+                link.download = `sticker_${String(index + 1).padStart(3, '0')}.png`;
+                link.click();
+            });
+            showNotification(`✓ 已導出 ${frames.length} 張 PNG`, true);
+        });
+
+        document.getElementById('exportApngBtn').addEventListener('click', () => {
+            if (frames.length < 2) {
+                showNotification('⚠ 需要至少 2 幀', false);
+                return;
+            }
+            exportAPNG();
+        });
+
+        function exportAPNG() {
+            // 簡化的 APNG 導出（使用 PNG 序列）
+            frames.forEach((frame, index) => {
+                const link = document.createElement('a');
+                link.href = frame.toDataURL('image/png');
+                link.download = `sticker_${String(index + 1).padStart(3, '0')}.png`;
+                link.click();
+            });
+            
+            setTimeout(() => {
+                showNotification('✓ PNG 序列已導出。用 Aseprite/Krita 轉成 APNG', true);
+            }, 1000);
+        }
+
+        function autoSave() {
+            const now = Date.now();
+            if (now - lastSaveTime > 5000) {
+                const data = frames.map(f => f.toDataURL());
+                localStorage.setItem('stickerData', JSON.stringify({
+                    frames: data,
+                    timestamp: now
+                }));
+                lastSaveTime = now;
+            }
+        }
+
+        function showNotification(message, isSuccess = true) {
+            const notif = document.createElement('div');
+            notif.className = 'notification' + (isSuccess ? '' : '.error');
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+
+        // 鍵盤快鍵
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (isPlaying) {
+                    document.getElementById('stopBtn').click();
+                } else {
+                    document.getElementById('playBtn').click();
+                }
+            } else if (e.code === 'KeyZ' && e.ctrlKey || e.metaKey) {
+                e.preventDefault();
+                document.getElementById('undoBtn').click();
+            } else if (e.code === 'KeyD') {
+                e.preventDefault();
+                if (frames.length > 1) {
+                    const index = currentFrameIndex;
+                    frames.splice(index, 1);
+                    if (currentFrameIndex >= frames.length) {
+                        currentFrameIndex = frames.length - 1;
+                    }
+                    renderCurrentFrame();
+                }
+            }
+        });
+
+        // 初始化
+        renderCurrentFrame();
+        updatePreview();
+
+        // 加載保存的數據
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('stickerData');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    frames = [];
+                    for (const dataUrl of data.frames) {
+                        const img = new Image();
+                        img.onload = () => {
+                            const newCanvas = getBlankCanvas();
+                            newCanvas.getContext('2d').drawImage(img, 0, 0);
+                            frames.push(newCanvas);
+                            if (frames.length === data.frames.length) {
+                                renderCurrentFrame();
+                            }
+                        };
+                        img.src = dataUrl;
+                    }
+                } catch (e) {
+                    console.log('無法載入保存的數據');
+                }
+            }
+        });
+    </script>
+</body>
+</html>
